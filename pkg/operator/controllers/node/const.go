@@ -15,5 +15,5 @@ const (
 	annotationDrainStartTime = "aro.openshift.io/drainStartTime"
 	stateDegraded            = "Degraded"
 	stateWorking             = "Working"
-	gracePeriod              = time.Hour
+	gracePeriod              = 10 * time.Minute
 )

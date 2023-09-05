@@ -56,11 +56,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.Log.Debug("controller is disabled")
+		r.Log.Print("node_controller: controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.Log.Debug("running")
+	r.Log.Print("node_controller: running reconcile loop")
 
 	node := &corev1.Node{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
@@ -80,6 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !isDraining(node) {
+		r.Log.Printf("node_controller: node %v is not draining", node.Name)
 		// we're not draining: ensure our annotation is not set and return
 		if getAnnotation(&node.ObjectMeta, annotationDrainStartTime) == "" {
 			r.ClearConditions(ctx)
@@ -98,6 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// we're draining: ensure our annotation is set
+	r.Log.Printf("node_controller: node %v is draining", node.Name)
 	t, err := time.Parse(time.RFC3339, getAnnotation(&node.ObjectMeta, annotationDrainStartTime))
 	if err != nil {
 		t = time.Now().UTC()
@@ -113,6 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// if our deadline hasn't expired, requeue ourselves and return
+	r.Log.Print("node_controller: if our deadline hasn't expired, requeue ourselves and return")
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
@@ -122,6 +125,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// drain the node disabling eviction
+	r.Log.Print("node_controller: drain the node disabling eviction")
 	err = drain.RunNodeDrain(&drain.Helper{
 		Client:              r.kubernetescli,
 		Force:               true,
